@@ -1,0 +1,11 @@
+{
+  "name": "cafego",
+  "version": "1.0.0",
+  "scripts": {
+    "server": "cd server && node index.js",
+    "mobile": "cd mobile && npx expo start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

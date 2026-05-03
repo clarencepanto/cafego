@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "CafeGo",
+    "slug": "cafego",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "updates": {
+      "enabled": false
+    },
+    "splash": {
+      "image": "./assets/splash.png",
+      "backgroundColor": "#FAF3E8"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.cafego.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FAF3E8"
+      },
+      "package": "com.cafego.app"
+    },
+    "scheme": "cafego",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "CafeGo uses your location to find cozy cafés near you."
+        }
+      ]
+    ]
+  }
+}

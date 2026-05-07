@@ -89,14 +89,14 @@ export default function SpotScreen({ spot, city, mode, onBack }) {
               <Text style={{ fontSize: 72 }}>🏛️</Text>
             </View>
           )}
-          <View style={[s.heroNav, { paddingTop: insets.top + 8 }]} />
-
-          <TouchableOpacity style={[s.heroBtn, SHADOW.sm]} onPress={onBack}>
-            <Text style={{ fontSize: 20, color: "#111" }}>‹</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[s.heroBtn, SHADOW.sm]}>
-            <Text style={{ fontSize: 18, color: "#111" }}>⋯</Text>
-          </TouchableOpacity>
+          <View style={[s.heroNav, { paddingTop: insets.top + 8 }]}>
+            <TouchableOpacity style={[s.heroBtn, SHADOW.sm]} onPress={onBack}>
+              <Text style={{ fontSize: 20, color: "#111" }}>‹</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.heroBtn, SHADOW.sm]}>
+              <Text style={{ fontSize: 18, color: "#111" }}>⋯</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Body */}
@@ -338,7 +338,6 @@ const s = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: 8,
   },
   heroBtn: {
     width: 36,

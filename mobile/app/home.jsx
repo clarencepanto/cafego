@@ -15,6 +15,9 @@ import { TRAVEL, COFFEE, SHADOW } from "../constants/theme";
 import { useCityPhoto } from "../hooks/useCityPhoto";
 import { useSaved } from "../hooks/useSaved";
 import { useNearby } from "../hooks/useNearby";
+import { useLocalTrips } from "../hooks/useLocalTrips";
+import { useNearbyCities } from "../hooks/useNearbyCities";
+import CafeModal from "../components/CafeModal";
 
 const CITIES = [
   { name: "Vancouver", province: "BC", emoji: "🌲" },
@@ -27,8 +30,6 @@ const CITIES = [
   { name: "Banff", province: "AB", emoji: "🦌" },
   { name: "Halifax", province: "NS", emoji: "⚓" },
 ];
-
-const FILTERS = ["All", "BC", "ON", "QC", "AB", "NS"];
 
 function CityCard({ city, onPress }) {
   const photo = useCityPhoto(city.name + " canada city");
@@ -289,31 +290,32 @@ function SavedScreen({
 }
 
 // ── Main Home Screen ──────────────────────────────────────────────────────────
-export default function HomeScreen({ mode, onModeChange, onSelectCity }) {
+export default function HomeScreen({
+  mode,
+  onModeChange,
+  onSelectCity,
+  onSelectLocalSpot,
+}) {
+  const {
+    data: tripData,
+    loading: tripLoading,
+    error: tripError,
+    userCity,
+  } = useLocalTrips();
   const insets = useSafeAreaInsets();
   const T = mode === "travel" ? TRAVEL : COFFEE;
   const isTravel = mode === "travel";
   const [custom, setCustom] = useState("");
-  const [activeFilter, setFilter] = useState("All");
+  const { cities: nearbyCities, loading: citiesLoading } = useNearbyCities();
   const [activeNav, setActiveNav] = useState("home");
-  const {
-    saved,
-    savedItinerary,
-    toggle,
-    toggleItinerary,
-    isItinerarySaved,
-    isSaved,
-  } = useSaved();
+  const { saved, savedItinerary, toggleItinerary, isSaved } = useSaved();
   const {
     cafes: nearbyCafes,
     loading: nearbyLoading,
     error: nearbyError,
   } = useNearby();
 
-  const filtered =
-    activeFilter === "All"
-      ? CITIES
-      : CITIES.filter((c) => c.province === activeFilter);
+  const [selectedCafe, setSelectedCafe] = useState(null);
 
   const handleSelectCity = (city, coffeeOnly = false) => {
     onSelectCity(city, coffeeOnly);
@@ -394,8 +396,81 @@ export default function HomeScreen({ mode, onModeChange, onSelectCity }) {
                 }
                 returnKeyType="search"
               />
-              <Text style={{ fontSize: 12, color: T.accent }}>📍 Canada</Text>
+              {custom.trim() ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    onSelectCity(custom.trim());
+                    setCustom("");
+                  }}
+                >
+                  <Text
+                    style={{ fontSize: 14, fontWeight: "700", color: T.accent }}
+                  >
+                    Go
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={{ fontSize: 12, color: T.accent }}>📍 Canada</Text>
+              )}
             </View>
+
+            {/* Live filter results */}
+            {custom.trim().length > 0 && (
+              <View style={[s.searchDropdown, { backgroundColor: T.card }]}>
+                {citiesLoading && (
+                  <View style={{ padding: 16, alignItems: "center" }}>
+                    <ActivityIndicator size="small" color={T.accent} />
+                  </View>
+                )}
+
+                {/* Filter nearby cities by query */}
+                {nearbyCities
+                  .filter((c) =>
+                    c.name.toLowerCase().includes(custom.toLowerCase()),
+                  )
+                  .map((city, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      style={[s.searchResult, { borderBottomColor: T.subtle }]}
+                      onPress={() => {
+                        onSelectCity(city.name);
+                        setCustom("");
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{ fontSize: 18 }}>📍</Text>
+                      <View>
+                        <Text style={[s.searchResultName, { color: T.text }]}>
+                          {city.name}
+                        </Text>
+                        <Text style={[s.searchResultSub, { color: T.muted }]}>
+                          Nearby city
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+
+                {/* Always show custom search option */}
+                <TouchableOpacity
+                  style={[s.searchResult, { borderBottomColor: T.subtle }]}
+                  onPress={() => {
+                    onSelectCity(custom.trim());
+                    setCustom("");
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 18 }}>🔍</Text>
+                  <View>
+                    <Text style={[s.searchResultName, { color: T.text }]}>
+                      Search "{custom}"
+                    </Text>
+                    <Text style={[s.searchResultSub, { color: T.muted }]}>
+                      Explore with AI
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           <View style={[s.modeToggle, SHADOW.sm, { backgroundColor: T.card }]}>
@@ -421,63 +496,151 @@ export default function HomeScreen({ mode, onModeChange, onSelectCity }) {
             ))}
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.filtersContent}
-          >
-            {FILTERS.map((f) => (
-              <TouchableOpacity
-                key={f}
-                style={[
-                  s.filterPill,
-                  { backgroundColor: activeFilter === f ? T.accent : T.card },
-                ]}
-                onPress={() => setFilter(f)}
-                activeOpacity={0.85}
-              >
-                <Text
-                  style={[
-                    s.filterText,
-                    { color: activeFilter === f ? "#fff" : T.muted },
-                  ]}
-                >
-                  {f}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
           {/* Travel mode */}
           {isTravel && (
             <>
-              <View style={s.sectionRow}>
-                <Text style={[s.sectionLabel, { color: T.text }]}>
-                  Recommendation
+              {tripLoading && (
+                <View style={{ paddingVertical: 32, alignItems: "center" }}>
+                  <ActivityIndicator color={T.accent} />
+                  <Text style={{ color: T.muted, fontSize: 13, marginTop: 8 }}>
+                    Finding trips near you...
+                  </Text>
+                </View>
+              )}
+
+              {tripError && (
+                <Text
+                  style={{
+                    color: T.muted,
+                    fontSize: 14,
+                    paddingHorizontal: 20,
+                  }}
+                >
+                  {tripError}
                 </Text>
-                <Text style={[s.sectionLink, { color: T.accent }]}>
-                  See all ›
-                </Text>
-              </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.recsContent}
-              >
-                {filtered.slice(0, 5).map((city) => (
-                  <CityCard
-                    key={city.name + "-rec"}
-                    city={city}
-                    onPress={() => onSelectCity(city.name)}
-                  />
-                ))}
-              </ScrollView>
-              <View style={[s.sectionRow, { marginTop: 20 }]}>
-                <Text style={[s.sectionLabel, { color: T.text }]}>
-                  All Cities
-                </Text>
-              </View>
-              <CityGrid cities={filtered} onSelectCity={onSelectCity} />
+              )}
+
+              {tripData && userCity && (
+                <>
+                  {/* Local spots */}
+                  <View style={s.sectionRow}>
+                    <Text style={[s.sectionLabel, { color: T.text }]}>
+                      In {userCity.city}
+                    </Text>
+                    <Text style={[s.sectionLink, { color: T.accent }]}>
+                      See all ›
+                    </Text>
+                  </View>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={s.recsContent}
+                  >
+                    {(tripData.local || []).map((place, i) => (
+                      <LocalTripCard
+                        key={i}
+                        place={place}
+                        onPress={() =>
+                          onSelectLocalSpot(
+                            {
+                              name: place.name,
+                              desc: place.desc,
+                              distance: place.distance,
+                              time: place.duration,
+                              type:
+                                place.type === "must-see"
+                                  ? "must-see"
+                                  : "hidden-gem",
+                              crowd: "medium",
+                              bestTime: "Anytime",
+                            },
+                            userCity.city,
+                          )
+                        }
+                        T={T}
+                      />
+                    ))}
+                  </ScrollView>
+
+                  {/* Nearby destinations */}
+                  <View style={[s.sectionRow, { marginTop: 24 }]}>
+                    <Text style={[s.sectionLabel, { color: T.text }]}>
+                      Nearby trips
+                    </Text>
+                    <Text style={[s.sectionLink, { color: T.accent }]}>
+                      See all ›
+                    </Text>
+                  </View>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={s.recsContent}
+                  >
+                    {(tripData.nearby || []).map((place, i) => (
+                      <LocalTripCard
+                        key={i}
+                        place={place}
+                        onPress={() =>
+                          onSelectLocalSpot(
+                            {
+                              name: place.name,
+                              desc: place.desc,
+                              distance: place.distance,
+                              time: place.duration,
+                              type: "hidden-gem",
+                              crowd: "medium",
+                              bestTime: "Anytime",
+                            },
+                            userCity.city,
+                          )
+                        }
+                        T={T}
+                      />
+                    ))}
+                  </ScrollView>
+
+                  {/* Popular picks */}
+                  <View style={[s.sectionRow, { marginTop: 24 }]}>
+                    <Text style={[s.sectionLabel, { color: T.text }]}>
+                      Popular destinations
+                    </Text>
+                  </View>
+                  <View style={s.gridWrapper}>
+                    {(() => {
+                      const rows = [];
+                      const popular = tripData.popular || [];
+                      for (let i = 0; i < popular.length; i += 2)
+                        rows.push(popular.slice(i, i + 2));
+                      return rows.map((row, ri) => (
+                        <View key={ri} style={s.gridRow}>
+                          {row.map((place, pi) => (
+                            <PopularCard
+                              key={pi}
+                              place={place}
+                              onPress={() =>
+                                onSelectLocalSpot(
+                                  {
+                                    name: place.name,
+                                    desc: place.desc,
+                                    distance: place.distance,
+                                    time: "Flexible",
+                                    type: "must-see",
+                                    crowd: "high",
+                                    bestTime: "Anytime",
+                                  },
+                                  userCity.city,
+                                )
+                              }
+                              T={T}
+                            />
+                          ))}
+                          {row.length === 1 && <View style={{ flex: 1 }} />}
+                        </View>
+                      ));
+                    })()}
+                  </View>
+                </>
+              )}
             </>
           )}
 
@@ -489,8 +652,8 @@ export default function HomeScreen({ mode, onModeChange, onSelectCity }) {
                 <Text style={[s.sectionLabel, { color: T.text }]}>
                   Loved by locals
                 </Text>
-                <Text style={[s.sectionLink, { color: T.muted }]}>
-                  Near you
+                <Text style={[s.sectionLink, { color: T.accent }]}>
+                  See all ›
                 </Text>
               </View>
 
@@ -523,7 +686,11 @@ export default function HomeScreen({ mode, onModeChange, onSelectCity }) {
                   contentContainerStyle={s.recsContent}
                 >
                   {nearbyCafes.map((cafe, i) => (
-                    <NearbyCafeCard key={i} cafe={cafe} onPress={() => {}} />
+                    <NearbyCafeCard
+                      key={i}
+                      cafe={cafe}
+                      onPress={() => setSelectedCafe(cafe)}
+                    />
                   ))}
                 </ScrollView>
               )}
@@ -554,7 +721,6 @@ export default function HomeScreen({ mode, onModeChange, onSelectCity }) {
       >
         {[
           { id: "home", icon: "🏠", label: "Home" },
-          { id: "search", icon: "🔍", label: "Search" },
           {
             id: "saved",
             icon: "🔖",
@@ -586,7 +752,112 @@ export default function HomeScreen({ mode, onModeChange, onSelectCity }) {
           </TouchableOpacity>
         ))}
       </View>
+
+      {selectedCafe && (
+        <CafeModal
+          cafe={selectedCafe}
+          mode={mode}
+          onClose={() => setSelectedCafe(null)}
+        />
+      )}
     </View>
+  );
+}
+
+function LocalTripCard({ place, onPress, T }) {
+  const photo = useCityPhoto(place.name + " canada");
+  return (
+    <TouchableOpacity
+      style={[s.localTripCard, SHADOW.md]}
+      onPress={onPress}
+      activeOpacity={0.88}
+    >
+      {photo ? (
+        <Image
+          source={{ uri: photo }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        />
+      ) : (
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: T.accentSoft,
+              alignItems: "center",
+              justifyContent: "center",
+            },
+          ]}
+        >
+          <Text style={{ fontSize: 40 }}>{place.emoji}</Text>
+        </View>
+      )}
+      <View style={[StyleSheet.absoluteFill, s.cityCardGradient]} />
+      <View style={s.localTripBadge}>
+        <Text
+          style={[
+            s.localTripBadgeText,
+            {
+              color:
+                place.type === "must-see" || place.type === "day-trip"
+                  ? "#0071E3"
+                  : "#1a8f38",
+            },
+          ]}
+        >
+          {place.type === "day-trip"
+            ? "🚗 Day trip"
+            : place.type === "weekend"
+              ? "🏕 Weekend"
+              : place.type === "must-see"
+                ? "⭐ Must-see"
+                : "💎 Hidden gem"}
+        </Text>
+      </View>
+      <View style={s.cityCardInfo}>
+        <Text style={s.cityCardName}>{place.name}</Text>
+        <Text style={s.cityCardSub}>
+          {place.distance} · {place.duration}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function PopularCard({ place, onPress, T }) {
+  const photo = useCityPhoto(place.name + " canada");
+  return (
+    <TouchableOpacity
+      style={[s.cityCard, SHADOW.md]}
+      onPress={onPress}
+      activeOpacity={0.88}
+    >
+      {photo ? (
+        <Image
+          source={{ uri: photo }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        />
+      ) : (
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: T.accentSoft,
+              alignItems: "center",
+              justifyContent: "center",
+            },
+          ]}
+        >
+          <Text style={{ fontSize: 36 }}>{place.emoji}</Text>
+        </View>
+      )}
+      <View style={[StyleSheet.absoluteFill, s.cityCardGradient]} />
+      <View style={s.cityCardInfo}>
+        <Text style={s.cityCardName}>{place.name}</Text>
+        <Text style={s.cityCardSub}>{place.distance}</Text>
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -797,4 +1068,40 @@ const s = StyleSheet.create({
   navItem: { alignItems: "center", gap: 3, paddingHorizontal: 16 },
   navIcon: { fontSize: 22 },
   navLabel: { fontSize: 10, fontWeight: "600" },
+  localTripCard: {
+    width: 220,
+    aspectRatio: 4 / 3,
+    borderRadius: 20,
+    overflow: "hidden",
+    position: "relative",
+  },
+  localTripBadge: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 99,
+  },
+  localTripBadgeText: { fontSize: 11, fontWeight: "700" },
+  searchDropdown: {
+    borderRadius: 14,
+    marginTop: 4,
+    overflow: "hidden",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+  },
+  searchResult: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderBottomWidth: 0.5,
+  },
+  searchResultName: { fontSize: 15, fontWeight: "600", letterSpacing: -0.2 },
+  searchResultSub: { fontSize: 12, marginTop: 1 },
 });

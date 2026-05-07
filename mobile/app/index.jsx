@@ -9,11 +9,26 @@ export default function App() {
   const [city, setCity] = useState(null);
   const [coffeeOnly, setCoffeeOnly] = useState(false);
   const [spot, setSpot] = useState(null);
+  const [directSpot, setDirectSpot] = useState(null);
 
   const handleSelectCity = (selectedCity, isCoffeeOnly = false) => {
     setCity(selectedCity);
     setCoffeeOnly(isCoffeeOnly);
   };
+
+  // ← directSpot MUST come first before city check
+  if (directSpot) {
+    return (
+      <SafeAreaProvider>
+        <SpotScreen
+          spot={directSpot.spot}
+          city={directSpot.city}
+          mode={mode}
+          onBack={() => setDirectSpot(null)}
+        />
+      </SafeAreaProvider>
+    );
+  }
 
   if (spot) {
     return (
@@ -51,6 +66,7 @@ export default function App() {
         mode={mode}
         onModeChange={setMode}
         onSelectCity={handleSelectCity}
+        onSelectLocalSpot={(spot, city) => setDirectSpot({ spot, city })}
       />
     </SafeAreaProvider>
   );

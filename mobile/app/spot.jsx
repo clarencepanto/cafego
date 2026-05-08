@@ -93,9 +93,6 @@ export default function SpotScreen({ spot, city, mode, onBack }) {
             <TouchableOpacity style={[s.heroBtn, SHADOW.sm]} onPress={onBack}>
               <Text style={{ fontSize: 20, color: "#111" }}>‹</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[s.heroBtn, SHADOW.sm]}>
-              <Text style={{ fontSize: 18, color: "#111" }}>⋯</Text>
-            </TouchableOpacity>
           </View>
         </View>
 

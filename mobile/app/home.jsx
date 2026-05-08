@@ -194,10 +194,9 @@ function SavedScreen({
   T,
   savedItinerary,
   toggleItinerary,
-  isSaved,
-  onSelectCity,
+  onSelectLocalSpot,
 }) {
-  const savedCities = CITIES.filter((c) => isSaved(c.name));
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   // Group itinerary by city
   const grouped = savedItinerary.reduce((acc, item) => {
@@ -206,49 +205,59 @@ function SavedScreen({
     return acc;
   }, {});
 
+  const handleDelete = (item) => {
+    setConfirmDelete(item);
+  };
+
+  const confirmAndDelete = () => {
+    toggleItinerary(confirmDelete, confirmDelete.city);
+    setConfirmDelete(null);
+  };
+
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 40 }}
-    >
-      {/* Saved Cities */}
-      <View style={s.sectionRow}>
-        <Text style={[s.sectionLabel, { color: T.text }]}>Saved Cities</Text>
-        <Text style={[s.sectionLink, { color: T.muted }]}>
-          {savedCities.length} cities
-        </Text>
-      </View>
-      {savedCities.length === 0 ? (
-        <Text
-          style={{
-            color: T.muted,
-            fontSize: 15,
-            paddingHorizontal: 20,
-            marginBottom: 24,
-          }}
-        >
-          No saved cities yet. Tap 🔖 on any city.
-        </Text>
-      ) : (
-        <CityGrid cities={savedCities} onSelectCity={onSelectCity} />
-      )}
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
+        {/* Header */}
+        <View style={s.sectionRow}>
+          <Text style={[s.sectionLabel, { color: T.text }]}>
+            Saved Itinerary
+          </Text>
+          <Text style={[s.sectionLink, { color: T.muted }]}>
+            {savedItinerary.length} stops
+          </Text>
+        </View>
 
-      {/* Saved Itinerary grouped by city */}
-      <View style={[s.sectionRow, { marginTop: 28 }]}>
-        <Text style={[s.sectionLabel, { color: T.text }]}>Saved Itinerary</Text>
-        <Text style={[s.sectionLink, { color: T.muted }]}>
-          {savedItinerary.length} stops
-        </Text>
-      </View>
-
-      {savedItinerary.length === 0 ? (
-        <Text style={{ color: T.muted, fontSize: 15, paddingHorizontal: 20 }}>
-          No saved stops yet. Tap + Add to Itinerary on any spot.
-        </Text>
-      ) : (
-        Object.entries(grouped).map(([city, items]) => (
-          <View key={city} style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-            <TouchableOpacity onPress={() => onSelectCity(city)}>
+        {savedItinerary.length === 0 ? (
+          <View
+            style={{
+              paddingHorizontal: 20,
+              paddingTop: 20,
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <Text style={{ fontSize: 40 }}>🗺️</Text>
+            <Text
+              style={{
+                color: T.muted,
+                fontSize: 15,
+                textAlign: "center",
+                lineHeight: 22,
+              }}
+            >
+              No saved stops yet.{"\n"}Tap + Add to Itinerary on any spot.
+            </Text>
+          </View>
+        ) : (
+          Object.entries(grouped).map(([city, items]) => (
+            <View
+              key={city}
+              style={{ paddingHorizontal: 20, marginBottom: 24 }}
+            >
+              {/* City header */}
               <View
                 style={[s.cityGroupHeader, { backgroundColor: T.accentSoft }]}
               >
@@ -256,36 +265,119 @@ function SavedScreen({
                   📍 {city}
                 </Text>
                 <Text style={[s.cityGroupCount, { color: T.accent }]}>
-                  {items.length} stops ›
+                  {items.length} {items.length === 1 ? "stop" : "stops"}
                 </Text>
               </View>
-            </TouchableOpacity>
-            {items.map((item, i) => (
-              <View
-                key={i}
-                style={[s.savedItem, { backgroundColor: T.card }, SHADOW.sm]}
-              >
-                <View style={[s.savedItemDot, { backgroundColor: T.accent }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.savedItemPlace, { color: T.text }]}>
-                    {item.place}
-                  </Text>
-                  <Text style={[s.savedItemTime, { color: T.muted }]}>
-                    {item.time} · {item.note}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => toggleItinerary(item, city)}
-                  hitSlop={8}
+
+              {/* Items */}
+              {items.map((item, i) => (
+                <View
+                  key={i}
+                  style={[s.savedItem, { backgroundColor: T.card }, SHADOW.sm]}
                 >
-                  <Text style={{ fontSize: 16 }}>🗑️</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+                  {/* Timeline dot and line */}
+                  <View style={s.savedItemTimeline}>
+                    <View
+                      style={[s.savedItemDot, { backgroundColor: T.accent }]}
+                    />
+                    {i < items.length - 1 && (
+                      <View
+                        style={[s.savedItemLine, { backgroundColor: T.subtle }]}
+                      />
+                    )}
+                  </View>
+
+                  {/* Content */}
+                  {/* Content — tappable */}
+                  <TouchableOpacity
+                    style={{ flex: 1 }}
+                    onPress={() =>
+                      onSelectLocalSpot(
+                        {
+                          name: item.place || item.name,
+                          desc: item.note || "A saved stop on your itinerary.",
+                          distance: "Saved location",
+                          time: item.time || "Flexible",
+                          type: "must-see",
+                          crowd: "medium",
+                          bestTime: "Anytime",
+                        },
+                        item.city,
+                      )
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.savedItemPlace, { color: T.text }]}>
+                      {item.place || item.name}
+                    </Text>
+                    <Text style={[s.savedItemTime, { color: T.muted }]}>
+                      {item.time}
+                    </Text>
+                    {item.note && (
+                      <Text style={[s.savedItemNote, { color: T.muted }]}>
+                        {item.note}
+                      </Text>
+                    )}
+                    <Text style={[s.savedItemTapHint, { color: T.accent }]}>
+                      Tap to view details →
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Delete button */}
+                  <TouchableOpacity
+                    onPress={() => handleDelete(item)}
+                    hitSlop={8}
+                    style={s.deleteBtn}
+                  >
+                    <Text style={{ fontSize: 16 }}>🗑️</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          ))
+        )}
+      </ScrollView>
+
+      {/* Confirm delete modal */}
+      {confirmDelete && (
+        <View style={s.confirmOverlay}>
+          <TouchableOpacity
+            style={s.confirmBg}
+            activeOpacity={1}
+            onPress={() => setConfirmDelete(null)}
+          />
+          <View style={[s.confirmSheet, { backgroundColor: T.card }]}>
+            <Text style={[s.confirmTitle, { color: T.text }]}>
+              Remove this stop?
+            </Text>
+            <Text style={[s.confirmDesc, { color: T.muted }]}>
+              "{confirmDelete.place || confirmDelete.name}" will be removed from
+              your {confirmDelete.city} itinerary.
+            </Text>
+            <View style={s.confirmBtns}>
+              <TouchableOpacity
+                style={[s.confirmBtn, { backgroundColor: T.accentSoft }]}
+                onPress={() => setConfirmDelete(null)}
+                activeOpacity={0.85}
+              >
+                <Text style={[s.confirmBtnText, { color: T.accent }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.confirmBtn, { backgroundColor: "#FF3B30" }]}
+                onPress={confirmAndDelete}
+                activeOpacity={0.85}
+              >
+                <Text style={[s.confirmBtnText, { color: "#fff" }]}>
+                  Remove
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        ))
+        </View>
       )}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -308,7 +400,7 @@ export default function HomeScreen({
   const [custom, setCustom] = useState("");
   const { cities: nearbyCities, loading: citiesLoading } = useNearbyCities();
   const [activeNav, setActiveNav] = useState("home");
-  const { saved, savedItinerary, toggleItinerary, isSaved } = useSaved();
+  const { saved, savedItinerary, toggleItinerary } = useSaved();
   const {
     cafes: nearbyCafes,
     loading: nearbyLoading,
@@ -359,8 +451,7 @@ export default function HomeScreen({
           T={T}
           savedItinerary={savedItinerary}
           toggleItinerary={toggleItinerary}
-          isSaved={isSaved}
-          onSelectCity={onSelectCity}
+          onSelectLocalSpot={onSelectLocalSpot}
         />
       )}
 
@@ -725,8 +816,8 @@ export default function HomeScreen({
             id: "saved",
             icon: "🔖",
             label:
-              saved.length > 0 || savedItinerary.length > 0
-                ? `Saved (${saved.length + savedItinerary.length})`
+              savedItinerary.length > 0
+                ? `Saved (${savedItinerary.length})`
                 : "Saved",
           },
         ].map((item) => (
@@ -1104,4 +1195,26 @@ const s = StyleSheet.create({
   },
   searchResultName: { fontSize: 15, fontWeight: "600", letterSpacing: -0.2 },
   searchResultSub: { fontSize: 12, marginTop: 1 },
+  savedItemTimeline: { width: 20, alignItems: "center", marginRight: 4 },
+  savedItemLine: { width: 1, flex: 1, marginTop: 4 },
+  savedItemNote: { fontSize: 12, lineHeight: 16, marginTop: 2 },
+  deleteBtn: { padding: 4 },
+  confirmOverlay: {
+    position: "absolute",
+    inset: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  confirmBg: {
+    position: "absolute",
+    inset: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  confirmSheet: { width: "80%", borderRadius: 20, padding: 24, gap: 12 },
+  confirmTitle: { fontSize: 18, fontWeight: "800", letterSpacing: -0.3 },
+  confirmDesc: { fontSize: 14, lineHeight: 20 },
+  confirmBtns: { flexDirection: "row", gap: 10, marginTop: 4 },
+  confirmBtn: { flex: 1, padding: 14, borderRadius: 14, alignItems: "center" },
+  confirmBtnText: { fontSize: 15, fontWeight: "700" },
+  savedItemTapHint: { fontSize: 11, fontWeight: "600", marginTop: 4 },
 });

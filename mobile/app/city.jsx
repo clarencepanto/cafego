@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import CafeModal from "../components/CafeModal";
 import {
   View,
   Text,
@@ -57,9 +58,13 @@ function SpotGridCard({ spot, onPress }) {
   );
 }
 
-function CafeCard({ cafe }) {
+function CafeCard({ cafe, onPress }) {
   return (
-    <View style={[s.cafeCard, SHADOW.sm]}>
+    <TouchableOpacity
+      onPress={() => onPress && onPress()}
+      activeOpacity={0.88}
+      style={[s.cafeCard, SHADOW.sm]}
+    >
       {cafe.photo && (
         <Image
           source={{ uri: cafe.photo }}
@@ -104,7 +109,7 @@ function CafeCard({ cafe }) {
           {cafe.address}
         </Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -115,19 +120,16 @@ export default function CityScreen({
   onBack,
   onSelectSpot,
 }) {
-  const insets = useSafeAreaInsets();
   const T = mode === "travel" ? TRAVEL : COFFEE;
+  const insets = useSafeAreaInsets(); // ← add this
   const { data, loading, error, explore } = useExplore();
   const { isSaved, toggle } = useSaved();
-  const [tab, setTab] = useState(
-    coffeeOnly ? "Cafés" : mode === "travel" ? "Spots" : "Cafés",
-  );
-  const TABS = coffeeOnly
-    ? ["Cafés"]
-    : mode === "travel"
-      ? ["Spots", "Itinerary", "Cafés"]
-      : ["Cafés", "Spots", "Itinerary"];
-
+  const [tab, setTab] = useState("Cafés");
+  const [selectedCafe, setSelectedCafe] = useState(null);
+  const TABS =
+    coffeeOnly || mode === "coffee"
+      ? ["Cafés"]
+      : ["Spots", "Itinerary", "Cafés"];
   useEffect(() => {
     explore(city);
   }, [city]);
@@ -322,12 +324,25 @@ export default function CityScreen({
                     </Text>
                   </View>
                 ) : (
-                  data.cafes.map((cafe, i) => <CafeCard key={i} cafe={cafe} />)
+                  data.cafes.map((cafe, i) => (
+                    <CafeCard
+                      key={i}
+                      cafe={cafe}
+                      onPress={() => setSelectedCafe(cafe)}
+                    />
+                  ))
                 )}
               </View>
             )}
           </View>
         </ScrollView>
+      )}
+      {selectedCafe && (
+        <CafeModal
+          cafe={selectedCafe}
+          mode={mode}
+          onClose={() => setSelectedCafe(null)}
+        />
       )}
     </View>
   );

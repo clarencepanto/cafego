@@ -403,8 +403,12 @@ export default function HomeScreen({
   const { saved, savedItinerary, toggleItinerary } = useSaved();
   const {
     cafes: nearbyCafes,
+    popularCafes,
     loading: nearbyLoading,
+    loadingMore,
     error: nearbyError,
+    loadMore,
+    hasMore,
   } = useNearby();
 
   const [selectedCafe, setSelectedCafe] = useState(null);
@@ -738,7 +742,7 @@ export default function HomeScreen({
           {/* Coffee mode */}
           {!isTravel && (
             <>
-              {/* Nearby cafés via GPS */}
+              {/* Loved by locals — nearest cafés */}
               <View style={s.sectionRow}>
                 <Text style={[s.sectionLabel, { color: T.text }]}>
                   Loved by locals
@@ -783,19 +787,58 @@ export default function HomeScreen({
                       onPress={() => setSelectedCafe(cafe)}
                     />
                   ))}
+                  {hasMore && (
+                    <TouchableOpacity
+                      style={[
+                        s.loadMoreBtn,
+                        { backgroundColor: T.card },
+                        SHADOW.sm,
+                      ]}
+                      onPress={loadMore}
+                      activeOpacity={0.85}
+                      disabled={loadingMore}
+                    >
+                      {loadingMore ? (
+                        <ActivityIndicator color={T.accent} size="small" />
+                      ) : (
+                        <>
+                          <Text style={{ fontSize: 24 }}>➕</Text>
+                          <Text style={[s.loadMoreText, { color: T.accent }]}>
+                            More
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
                 </ScrollView>
               )}
 
-              {/* Browse by city — coffee only */}
-              <View style={[s.sectionRow, { marginTop: 24 }]}>
-                <Text style={[s.sectionLabel, { color: T.text }]}>
-                  Browse by city
-                </Text>
-              </View>
-              <CityGrid
-                cities={CITIES.slice(0, 6)}
-                onSelectCity={(city) => onSelectCity(city, true)}
-              />
+              {/* Most popular near you */}
+              {!nearbyLoading && popularCafes.length > 0 && (
+                <>
+                  <View style={[s.sectionRow, { marginTop: 24 }]}>
+                    <Text style={[s.sectionLabel, { color: T.text }]}>
+                      Most popular near you
+                    </Text>
+                    <Text style={[s.sectionLink, { color: T.muted }]}>
+                      ⭐ Top rated
+                    </Text>
+                  </View>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={s.recsContent}
+                  >
+                    {popularCafes.map((cafe, i) => (
+                      <NearbyCafeCard
+                        key={i}
+                        cafe={cafe}
+                        onPress={() => setSelectedCafe(cafe)}
+                      />
+                    ))}
+                  </ScrollView>
+                </>
+              )}
             </>
           )}
 

@@ -595,11 +595,48 @@ export default function HomeScreen({
           {isTravel && (
             <>
               {tripLoading && (
-                <View style={{ paddingVertical: 32, alignItems: "center" }}>
-                  <ActivityIndicator color={T.accent} />
-                  <Text style={{ color: T.muted, fontSize: 13, marginTop: 8 }}>
-                    Finding trips near you...
-                  </Text>
+                <View style={{ paddingHorizontal: 20 }}>
+                  {/* Section label skeleton */}
+                  <View
+                    style={[s.skeletonLabel, { backgroundColor: T.subtle }]}
+                  />
+
+                  {/* Card skeletons */}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={s.recsContent}
+                  >
+                    {[1, 2, 3].map((i) => (
+                      <View
+                        key={i}
+                        style={[s.skeletonCard, { backgroundColor: T.subtle }]}
+                      />
+                    ))}
+                  </ScrollView>
+
+                  <View
+                    style={[
+                      s.skeletonLabel,
+                      {
+                        backgroundColor: T.subtle,
+                        marginTop: 24,
+                        width: "40%",
+                      },
+                    ]}
+                  />
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={s.recsContent}
+                  >
+                    {[1, 2, 3].map((i) => (
+                      <View
+                        key={i}
+                        style={[s.skeletonCard, { backgroundColor: T.subtle }]}
+                      />
+                    ))}
+                  </ScrollView>
                 </View>
               )}
 
@@ -1260,4 +1297,18 @@ const s = StyleSheet.create({
   confirmBtn: { flex: 1, padding: 14, borderRadius: 14, alignItems: "center" },
   confirmBtnText: { fontSize: 15, fontWeight: "700" },
   savedItemTapHint: { fontSize: 11, fontWeight: "600", marginTop: 4 },
+
+  skeletonLabel: {
+    height: 22,
+    width: "55%",
+    borderRadius: 6,
+    marginBottom: 14,
+    opacity: 0.5,
+  },
+  skeletonCard: {
+    width: 220,
+    aspectRatio: 4 / 3,
+    borderRadius: 20,
+    opacity: 0.4,
+  },
 });

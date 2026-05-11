@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../constants/config";
 
-// Cache lives outside the hook so it persists across renders and navigation
-const cache = {};
+const memCache = {};
 
 export function useExplore() {
   const [data, setData] = useState(null);
@@ -10,12 +10,27 @@ export function useExplore() {
   const [error, setError] = useState(null);
 
   const explore = useCallback(async (city) => {
-    // If we already fetched this city, use the cache instantly
-    if (cache[city]) {
-      setData(cache[city]);
+    // 1 — check memory cache first (instant)
+    if (memCache[city]) {
+      setData(memCache[city]);
       return;
     }
 
+    // 2 — check AsyncStorage cache (fast, persists between sessions)
+    try {
+      const stored = await AsyncStorage.getItem(`explore_${city}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Only use cache if less than 24 hours old
+        if (Date.now() - parsed.timestamp < 86400000) {
+          memCache[city] = parsed.data;
+          setData(parsed.data);
+          return;
+        }
+      }
+    } catch {}
+
+    // 3 — fetch fresh data
     setLoading(true);
     setError(null);
     setData(null);
@@ -53,8 +68,16 @@ export function useExplore() {
         cafes: Array.isArray(cafesData.cafes) ? cafesData.cafes : [],
       };
 
-      // Save to cache
-      cache[city] = result;
+      // Save to both caches
+      memCache[city] = result;
+      await AsyncStorage.setItem(
+        `explore_${city}`,
+        JSON.stringify({
+          data: result,
+          timestamp: Date.now(),
+        }),
+      );
+
       setData(result);
     } catch (err) {
       setError(err.message);
